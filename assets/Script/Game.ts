@@ -2,6 +2,7 @@ import {
     _decorator,
     Component,
     EventMouse,
+    EventTouch,
     instantiate,
     JsonAsset,
     Layout,
@@ -10,6 +11,7 @@ import {
     systemEvent,
     SystemEvent,
     UITransform,
+    v3,
     Vec2,
     Vec3,
 } from "cc";
@@ -28,6 +30,8 @@ export class Game extends Component {
     @property({ type: Node })
     patterns: Node = null;
     location;
+    private isDragging: boolean = false;
+    private offset: Vec3 = v3();
     start() {
         let jsonData = this.patternJson.json;
         let patterns = jsonData.patterns;
@@ -50,42 +54,33 @@ export class Game extends Component {
         }
 
         this.patterns.children.forEach((child: Node) => {
-            child.on(
-                Node.EventType.MOUSE_DOWN,
-                (event: MouseEvent) => {
-                    console.log("outer event", event);
-                    // console.log(event.)
-                    // event.target.addEventListener(
-                    //     Node.EventType.MOUSE_MOVE,
-                    //     (event: MouseEvent) => {
-                    //         console.log("inner event", event);
-                    //     },
-                    //     true
-                    // );
-                    let pos = child.getComponent(UITransform).convertToWorldSpaceAR(new Vec3(event.x, event.y, 0));
-                    let otherChild = child.parent.children.filter((childNode) => childNode.name !== child.name);
-                    child.setScale(1.3, 1.3, 0);
-                    otherChild.forEach((childNode) => childNode.setScale(new Vec3(0.7, 0.7, 0.7)));
-
-                    // console.log("before pos", child.getWorldPosition());
-                    // child.setWorldPosition(pos);
-                    // console.log("after pos", child.getWorldPosition());
-                },
-                this
-            );
-            child.on(Node.EventType.MOUSE_LEAVE, (event: MouseEvent) => {
-                child.parent.children.forEach((childNode) => childNode.setScale(1, 1, 1));
-            });
+            child.on(Node.EventType.TOUCH_START, (event: EventTouch) => this.onTouchStart(event, child), this);
+            child.on(Node.EventType.TOUCH_MOVE, (event: EventTouch) => this.onTouchMove(event, child), this);
+            child.on(Node.EventType.TOUCH_END, (event: EventTouch) => this.onTouchEnd(event, child), this);
+            child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
         });
     }
+    private onTouchStart(event: EventTouch, child: Node) {
+        this.isDragging = true;
+        const touchLocation = event.getUILocation();
+        const nodeLocation = child
+            .getComponent(UITransform)
+            .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
+        this.offset = child.position.subtract(nodeLocation);
+    }
 
-    playAnimation(event: Event, node: Node) {
-        console.log("play called");
-        let otherChild = node.parent.children.filter((childNode) => childNode.name !== node.name);
-        // console.log("curr child", node);
-        // console.log("other child", otherChild);
-        node.setScale(new Vec3(1.3, 1.3, 0));
-        otherChild.forEach((childNode) => childNode.setScale(new Vec3(0.7, 0.7, 0.7)));
+    private onTouchMove(event: EventTouch, child: Node) {
+        if (!this.isDragging) return;
+
+        const touchLocation = event.getUILocation();
+        const nodeLocation = child
+            .getComponent(UITransform)
+            .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
+        child.setPosition(nodeLocation.add(this.offset));
+    }
+
+    private onTouchEnd(event: EventTouch, child: Node) {
+        this.isDragging = false;
     }
 
     getDataByName(patterns: any[], name: string) {
