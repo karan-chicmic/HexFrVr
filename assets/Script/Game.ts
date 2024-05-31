@@ -1,4 +1,18 @@
-import { _decorator, Component, instantiate, JsonAsset, Layout, Node, Prefab, SystemEvent, UITransform, Vec2, Vec3 } from "cc";
+import {
+    _decorator,
+    Component,
+    EventMouse,
+    instantiate,
+    JsonAsset,
+    Layout,
+    Node,
+    Prefab,
+    systemEvent,
+    SystemEvent,
+    UITransform,
+    Vec2,
+    Vec3,
+} from "cc";
 const { ccclass, property } = _decorator;
 
 @ccclass("Game")
@@ -34,12 +48,12 @@ export class Game extends Component {
             }
             this.tileArea.addChild(rowNode);
         }
+
         this.patterns.children.forEach((child: Node) => {
             child.on(
                 Node.EventType.MOUSE_DOWN,
                 (event: MouseEvent) => {
                     console.log("outer event", event);
-                   
                     // console.log(event.)
                     // event.target.addEventListener(
                     //     Node.EventType.MOUSE_MOVE,
@@ -49,6 +63,9 @@ export class Game extends Component {
                     //     true
                     // );
                     let pos = child.getComponent(UITransform).convertToWorldSpaceAR(new Vec3(event.x, event.y, 0));
+                    let otherChild = child.parent.children.filter((childNode) => childNode.name !== child.name);
+                    child.setScale(1.3, 1.3, 0);
+                    otherChild.forEach((childNode) => childNode.setScale(new Vec3(0.7, 0.7, 0.7)));
 
                     // console.log("before pos", child.getWorldPosition());
                     // child.setWorldPosition(pos);
@@ -56,6 +73,9 @@ export class Game extends Component {
                 },
                 this
             );
+            child.on(Node.EventType.MOUSE_LEAVE, (event: MouseEvent) => {
+                child.parent.children.forEach((childNode) => childNode.setScale(1, 1, 1));
+            });
         });
     }
 
