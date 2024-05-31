@@ -1,19 +1,16 @@
 import {
     _decorator,
     Component,
-    EventMouse,
     EventTouch,
     instantiate,
     JsonAsset,
     Layout,
     Node,
     Prefab,
-    systemEvent,
-    SystemEvent,
     UITransform,
     v3,
-    Vec2,
     Vec3,
+    Widget,
 } from "cc";
 const { ccclass, property } = _decorator;
 
@@ -43,8 +40,10 @@ export class Game extends Component {
             let rowNode = instantiate(this.rowPrefab);
             if (rowLength < 9) {
                 let diff = 9 - rowLength;
-                rowNode.getComponent(Layout).paddingLeft = (diff * 45) / 2;
-                rowNode.getComponent(Layout).paddingRight = (diff * 45) / 2;
+                // rowNode.getComponent(Layout).paddingLeft = (diff * 45) / 2;
+                // rowNode.getComponent(Layout).paddingRight = (diff * 45) / 2;
+                rowNode.getComponent(Widget).left = (diff * 45) / 2;
+                rowNode.getComponent(Widget).right = (diff * 45) / 2;
             }
             for (let j = 0; j < rowLength; j++) {
                 let tileNode = instantiate(this.tilePrefab);
