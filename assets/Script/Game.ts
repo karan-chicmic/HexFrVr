@@ -1,7 +1,5 @@
 import {
     _decorator,
-    BlockInputEvents,
-    Collider,
     Color,
     Component,
     EventTouch,
@@ -47,10 +45,6 @@ export class Game extends Component {
     private MaxLength = 9;
 
     start() {
-        // console.log(this.node.getComponent(UITransform));
-        let jsonData = this.patternJson.json;
-        let patterns = jsonData.patterns;
-        let levelData = this.getDataByName(patterns, `map`);
         this.generateBoard(this.MinLength, this.MaxLength);
         this.generateReverseBoard(this.MinLength, this.MaxLength);
         this.generatePattern();
@@ -164,15 +158,16 @@ export class Game extends Component {
                     let blockNode = instantiate(this.patternPrefab);
                     let first = rowData[0];
                     let last = rowData[rowData.length - 1];
+                    let blockNodeUITransform = blockNode.getComponent(UITransform).width;
                     row.addChild(blockNode);
                     if (j % 2 == 1) {
                         if (first == 0 && last !== 0) {
                             //padding left
-                            row.getComponent(Layout).paddingLeft = 25;
+                            row.getComponent(Layout).paddingLeft = blockNodeUITransform / 2;
                         }
                         if (first !== 0 && last == 0) {
                             //padding right
-                            row.getComponent(Layout).paddingRight = 25;
+                            row.getComponent(Layout).paddingRight = blockNodeUITransform / 2;
                         }
                     }
                 }
