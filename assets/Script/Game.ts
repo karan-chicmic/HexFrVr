@@ -38,27 +38,33 @@ export class Game extends Component {
     location: any;
     private isDragging: boolean = false;
     private offset: Vec3 = v3();
+
+    private MinLength = 5;
+    private MaxLength = 9;
+
     start() {
         // console.log(this.node.getComponent(UITransform));
         let jsonData = this.patternJson.json;
         let patterns = jsonData.patterns;
         let levelData = this.getDataByName(patterns, `map`);
+        this.generateBoard(this.MinLength, this.MaxLength);
+        this.generateReverseBoard(this.MinLength, this.MaxLength);
         this.generatePattern();
-        for (let i = 0; i < 9; i++) {
-            let rowData = levelData[i];
-            let rowLength = rowData.length;
-            let rowNode = instantiate(this.rowPrefab);
-            if (rowLength < 9) {
-                let diff = 9 - rowLength;
-                rowNode.getComponent(Widget).left = (diff * 50) / 2;
-                rowNode.getComponent(Widget).right = (diff * 50) / 2;
-            }
-            for (let j = 0; j < rowLength; j++) {
-                let tileNode = instantiate(this.tilePrefab);
-                rowNode.addChild(tileNode);
-            }
-            this.tileArea.addChild(rowNode);
-        }
+        // for (let i = 0; i < 9; i++) {
+        //     let rowData = levelData[i];
+        //     let rowLength = rowData.length;
+        //     let rowNode = instantiate(this.rowPrefab);
+        //     if (rowLength < 9) {
+        //         let diff = 9 - rowLength;
+        //         rowNode.getComponent(Widget).left = (diff * 50) / 2;
+        //         rowNode.getComponent(Widget).right = (diff * 50) / 2;
+        //     }
+        //     for (let j = 0; j < rowLength; j++) {
+        //         let tileNode = instantiate(this.tilePrefab);
+        //         rowNode.addChild(tileNode);
+        //     }
+        //     this.tileArea.addChild(rowNode);
+        // }
 
         this.patterns.children.forEach((child: Node) => {
             child.on(Node.EventType.TOUCH_START, (event: EventTouch) => this.onTouchStart(event, child), this);
@@ -76,6 +82,38 @@ export class Game extends Component {
         this.offset = child.position.subtract(nodeLocation);
     }
 
+    generateBoard(min: number, max: number) {
+        for (let i = min; i <= max; i++) {
+            let row = instantiate(this.rowPrefab);
+            for (let j = 0; j < i; j++) {
+                let brick = instantiate(this.tilePrefab);
+                let brickWidth = brick.getComponent(UITransform).width;
+                if (i < max) {
+                    let diff = max - i;
+                    row.getComponent(Widget).left = (diff * brickWidth) / 2;
+                    row.getComponent(Widget).right = (diff * brickWidth) / 2;
+                }
+                row.addChild(brick);
+            }
+            this.tileArea.addChild(row);
+        }
+    }
+    generateReverseBoard(min: number, max: number) {
+        for (let i = max - 1; i >= min; i--) {
+            let row = instantiate(this.rowPrefab);
+            for (let j = 0; j < i; j++) {
+                let brick = instantiate(this.tilePrefab);
+                let brickWidth = brick.getComponent(UITransform).width;
+                if (i < max) {
+                    let diff = max - i;
+                    row.getComponent(Widget).left = (diff * brickWidth) / 2;
+                    row.getComponent(Widget).right = (diff * brickWidth) / 2;
+                }
+                row.addChild(brick);
+            }
+            this.tileArea.addChild(row);
+        }
+    }
     private onTouchMove(event: EventTouch, child: Node) {
         if (!this.isDragging) return;
 
@@ -89,8 +127,8 @@ export class Game extends Component {
 
     private onTouchEnd(event: EventTouch, child: Node) {
         this.isDragging = false;
-        console.log(event.touch.getPreviousLocation().x);
-        console.log(event.touch.getPreviousLocation().y);
+
+        this.checkAvailability(event, child);
     }
 
     getDataByName(patterns: any[], name: string) {
@@ -131,8 +169,16 @@ export class Game extends Component {
             this.patterns.addChild(rowNode);
         }
     }
-    checkAvailability(currNode: Node) {
+    checkAvailability(event: EventTouch, currNode: Node) {
         // get node from parent corresponding to mouse position
         // i want to check if currNode can be placed in tiledArea or not
+        let currNodeBoundingBox = currNode.getComponent(UITransform).getBoundingBox();
+
+        console.log(event.getUILocation());
+        let selectedTile = this.tileArea.children.filter((targetChild) => {
+            let targetBoudingBox = targetChild.getComponent(UITransform).getBoundingBox();
+            targetBoudingBox.intersects(currNodeBoundingBox);
+        });
+        console.log(selectedTile);
     }
 }
