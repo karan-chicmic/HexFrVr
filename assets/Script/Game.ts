@@ -12,6 +12,7 @@ import {
     Prefab,
     randomRangeInt,
     Sprite,
+    tween,
     UITransform,
     v3,
     Vec2,
@@ -42,7 +43,6 @@ export class Game extends Component {
     location: any;
     private isDragging: boolean = false;
     private offset: Vec3 = v3();
-
     private MinLength = 5;
     private MaxLength = 9;
 
@@ -54,42 +54,44 @@ export class Game extends Component {
         this.generateBoard(this.MinLength, this.MaxLength);
         this.generateReverseBoard(this.MinLength, this.MaxLength);
         this.generatePattern();
-        // for (let i = 0; i < 9; i++) {
-        //     let rowData = levelData[i];
-        //     let rowLength = rowData.length;
-        //     let rowNode = instantiate(this.rowPrefab);
-        //     if (rowLength < 9) {
-        //         let diff = 9 - rowLength;
-        //         rowNode.getComponent(Widget).left = (diff * 50) / 2;
-        //         rowNode.getComponent(Widget).right = (diff * 50) / 2;
-        //     }
-        //     for (let j = 0; j < rowLength; j++) {
-        //         let tileNode = instantiate(this.tilePrefab);
-        //         rowNode.addChild(tileNode);
-        //     }
-        //     this.tileArea.addChild(rowNode);
-        // }
 
         this.patterns.children.forEach((child: Node) => {
-            child.on(Node.EventType.TOUCH_START, (event: EventTouch) => this.onTouchStart(event, child), this);
+            child.on(
+                Node.EventType.TOUCH_START,
+                (event: EventTouch) => this.onTouchStart(event, child),
+
+                this
+            );
             child.on(Node.EventType.TOUCH_MOVE, (event: EventTouch) => this.onTouchMove(event, child), this);
-            child.on(Node.EventType.TOUCH_END, (event: EventTouch) => this.onTouchEnd(event, child), this);
+            child.on(
+                Node.EventType.TOUCH_END,
+                (event: EventTouch) => this.onTouchEnd(event, child),
+
+                this
+            );
             child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
         });
     }
     onTouchStart(event: EventTouch, child: Node) {
         this.isDragging = true;
-        // let otherChilds = child.parent.children.filter((childNode) => childNode !== child);
-        // console.log(otherChilds.length);
-        // child.setScale(1.3, 1.3, 0);
-        // otherChilds.forEach((otherChild) => otherChild.setScale(0.8, 0.8, 0));
+        this.scaleUp(child);
+
         const touchLocation = event.getUILocation();
         const nodeLocation = child
             .getComponent(UITransform)
             .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
         this.offset = child.position.subtract(nodeLocation);
     }
-
+    scaleUp(child: Node) {
+        tween(child)
+            .to(0.25, { scale: new Vec3(1.2, 1.2, 1.2) }, { easing: "linear" })
+            .start();
+    }
+    scaleDown(child: Node) {
+        tween(child)
+            .to(0.25, { scale: new Vec3(1, 1, 1) }, { easing: "linear" })
+            .start();
+    }
     generateBoard(min: number, max: number) {
         for (let i = min; i <= max; i++) {
             let row = instantiate(this.rowPrefab);
@@ -130,16 +132,15 @@ export class Game extends Component {
             .getComponent(UITransform)
             .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
 
-        child.setPosition(nodeLocation.add(this.offset));
-
         this.checkAvailability(event, child);
+        // this.scaleUp(child);
+        child.setPosition(nodeLocation.add(this.offset));
     }
 
     onTouchEnd(event: EventTouch, child: Node) {
+        this.scaleDown(child);
+
         this.isDragging = false;
-        // child.parent.children.forEach((childNode) => {
-        //     childNode.setScale(1, 1, 0);
-        // });
     }
 
     getDataByName(patterns: any[], name: string) {
@@ -193,19 +194,22 @@ export class Game extends Component {
 
         console.log("row", hitNode);
         if (hitNode != null) {
-            const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
-            console.log("tile", tile);
+            // const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
+            // console.log("tile", tile);
         }
     }
 
     getNodeAtPoint(point: Vec2) {
         // Iterate through nodes and check collision
+        let arr = [];
         for (const child of this.tileArea.children) {
-            if (child.getComponent(UITransform).getBoundingBox().contains(point)) {
-                return child;
-            }
+            for (const tile of child.children)
+                if (tile.getComponent(UITransform).getBoundingBox().contains(point)) {
+                    tile.getChildByName("Sprite").getComponent(Sprite).color = Color.GREEN;
+                    arr.push(tile);
+                }
         }
-        return null;
+        return arr;
     }
     getTileFromRow(row: Node, point: Vec2) {
         for (const tile of row.children) {
