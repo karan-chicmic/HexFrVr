@@ -43,6 +43,9 @@ export class Game extends Component {
     private offset: Vec3 = v3();
     private MinLength = 5;
     private MaxLength = 9;
+    private rNo = -1;
+
+    mapSet = new Map<string, number>();
 
     start() {
         this.generateBoard(this.MinLength, this.MaxLength);
@@ -89,9 +92,14 @@ export class Game extends Component {
     generateBoard(min: number, max: number) {
         for (let i = min; i <= max; i++) {
             let row = instantiate(this.rowPrefab);
+            this.rNo = this.rNo + 1;
             for (let j = 0; j < i; j++) {
                 let brick = instantiate(this.tilePrefab);
                 let brickWidth = brick.getComponent(UITransform).width;
+                let index = this.rNo.toString() + j.toString();
+
+                this.mapSet.set(index, 0);
+
                 if (i < max) {
                     let diff = max - i;
                     row.getComponent(Widget).left = (diff * brickWidth) / 2;
@@ -104,8 +112,12 @@ export class Game extends Component {
     }
     generateReverseBoard(min: number, max: number) {
         for (let i = max - 1; i >= min; i--) {
+            this.rNo = this.rNo + 1;
             let row = instantiate(this.rowPrefab);
             for (let j = 0; j < i; j++) {
+                let index = this.rNo.toString() + j.toString();
+
+                this.mapSet.set(index, 0);
                 let brick = instantiate(this.tilePrefab);
                 let brickWidth = brick.getComponent(UITransform).width;
                 if (i < max) {
@@ -127,7 +139,6 @@ export class Game extends Component {
             .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
 
         this.checkAvailability(event, child);
-        // this.scaleUp(child);
         child.setPosition(nodeLocation.add(this.offset));
     }
 
@@ -147,9 +158,9 @@ export class Game extends Component {
             let Allpatterns = jsonData.block;
             let blockNo = randomRangeInt(1, Allpatterns.length + 1);
             let blockData = this.getDataByName(Allpatterns, `block${blockNo}`);
-            let str = `block${blockNo}`;
+
             let rowNode = instantiate(this.blockPrefab);
-            console.log("block data " + `block${blockNo}`, blockData);
+
             for (let j = 0; j < blockData.length; j++) {
                 let rowData = blockData[j];
                 let row = instantiate(this.rowPrefab);
@@ -187,24 +198,27 @@ export class Game extends Component {
             .convertToNodeSpaceAR(new Vec3(mousePosition.x, mousePosition.y, 0));
         const hitNode = this.getNodeAtPoint(new Vec2(localPosition.x, localPosition.y));
 
-        console.log("row", hitNode);
         if (hitNode != null) {
-            // const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
-            // console.log("tile", tile);
+            const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
+
+            let tileIndex = hitNode.children.indexOf(tile);
+            let parentIndex = this.tileArea.children.indexOf(hitNode);
+
+            let index = parentIndex.toString() + tileIndex.toString();
+            console.log("value at cell", this.mapSet.get(index));
+
+            // check if value is undefined
         }
     }
 
     getNodeAtPoint(point: Vec2) {
         // Iterate through nodes and check collision
-        let arr = [];
         for (const child of this.tileArea.children) {
-            for (const tile of child.children)
-                if (tile.getComponent(UITransform).getBoundingBox().contains(point)) {
-                    tile.getChildByName("Sprite").getComponent(Sprite).color = Color.GREEN;
-                    arr.push(tile);
-                }
+            if (child.getComponent(UITransform).getBoundingBox().contains(point)) {
+                return child;
+            }
         }
-        return arr;
+        return null;
     }
     getTileFromRow(row: Node, point: Vec2) {
         for (const tile of row.children) {
