@@ -11,6 +11,7 @@ import {
     randomRangeInt,
     UITransform,
     v3,
+    Vec2,
     Vec3,
     Widget,
 } from "cc";
@@ -38,8 +39,9 @@ export class Game extends Component {
     location: any;
     private isDragging: boolean = false;
     private offset: Vec3 = v3();
+    private startPos: Vec3 = v3();
+
     start() {
-        // console.log(this.node.getComponent(UITransform));
         let jsonData = this.patternJson.json;
         let patterns = jsonData.patterns;
         let levelData = this.getDataByName(patterns, `map`);
@@ -67,8 +69,10 @@ export class Game extends Component {
             child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
         });
     }
+
     private onTouchStart(event: EventTouch, child: Node) {
         this.isDragging = true;
+        this.startPos = child.position.clone();
         const touchLocation = event.getUILocation();
         const nodeLocation = child
             .getComponent(UITransform)
@@ -89,8 +93,16 @@ export class Game extends Component {
 
     private onTouchEnd(event: EventTouch, child: Node) {
         this.isDragging = false;
-        console.log(event.touch.getPreviousLocation().x);
-        console.log(event.touch.getPreviousLocation().y);
+
+        if (this.checkAvailability(child)) {
+            this.placeBlock(child);
+            this.clearFullRowsAndColumns();
+            if (!this.hasValidMoves()) {
+                this.gameOver();
+            }
+        } else {
+            child.setPosition(this.startPos); // Return to start position if not valid
+        }
     }
 
     getDataByName(patterns: any[], name: string) {
@@ -131,8 +143,79 @@ export class Game extends Component {
             this.patterns.addChild(rowNode);
         }
     }
+
     checkAvailability(currNode: Node) {
-        // get node from parent corresponding to mouse position
-        // i want to check if currNode can be placed in tiledArea or not
+        // Check if the block can be placed in the tile area without overlapping or going out of bounds
+        const blockPosition = currNode.getWorldPosition();
+        const tileAreaTransform = this.tileArea.getComponent(UITransform);
+        const tileAreaPosition = tileAreaTransform.convertToNodeSpaceAR(blockPosition);
+
+        const tileNodes = this.tileArea.getComponentsInChildren(UITransform);
+
+        for (let tileNode of tileNodes) {
+            if (tileNode.node === currNode) continue;
+            if (
+                tileNode
+                    .getComponent(UITransform)
+                    .getBoundingBox()
+                    .intersects(currNode.getComponent(UITransform).getBoundingBox())
+            ) {
+                return false;
+            }
+        }
+
+        return tileAreaTransform.getBoundingBox().contains(new Vec2(tileAreaPosition.x, tileAreaPosition.y));
+    }
+
+    placeBlock(blockNode: Node) {
+        // Adjust positions and parent the blockNode to the tile area
+        const tileAreaTransform = this.tileArea.getComponent(UITransform);
+        const blockPosition = blockNode.getWorldPosition();
+        const localPosition = tileAreaTransform.convertToNodeSpaceAR(blockPosition);
+        blockNode.setPosition(localPosition);
+        blockNode.setParent(this.tileArea);
+    }
+
+    clearFullRowsAndColumns() {
+        const rows = this.tileArea.children;
+        let columns = new Array(rows[0].children.length).fill(0).map(() => []);
+
+        rows.forEach((row, rowIndex) => {
+            if (row.children.every((tile) => tile.active)) {
+                row.children.forEach((tile) => (tile.active = false));
+                // Award points here for clearing a row
+            }
+            row.children.forEach((tile, colIndex) => {
+                columns[colIndex].push(tile);
+            });
+        });
+
+        columns.forEach((column) => {
+            if (column.every((tile) => tile.active)) {
+                column.forEach((tile) => (tile.active = false));
+                // Award points here for clearing a column
+            }
+        });
+    }
+
+    hasValidMoves() {
+        const blocks = this.patterns.children;
+        const tileAreaTransform = this.tileArea.getComponent(UITransform);
+
+        for (let block of blocks) {
+            const blockPosition = block.getWorldPosition();
+            const localPosition = tileAreaTransform.convertToNodeSpaceAR(blockPosition);
+
+            if (this.checkAvailability(block)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    gameOver() {
+        console.log("Game Over");
+        // Show game over screen, reset the game, etc.
     }
 }
