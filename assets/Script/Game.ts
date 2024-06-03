@@ -1,6 +1,8 @@
 import {
     _decorator,
     BlockInputEvents,
+    Collider,
+    Color,
     Component,
     EventTouch,
     instantiate,
@@ -9,8 +11,10 @@ import {
     Node,
     Prefab,
     randomRangeInt,
+    Sprite,
     UITransform,
     v3,
+    Vec2,
     Vec3,
     Widget,
 } from "cc";
@@ -73,8 +77,12 @@ export class Game extends Component {
             child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
         });
     }
-    private onTouchStart(event: EventTouch, child: Node) {
+    onTouchStart(event: EventTouch, child: Node) {
         this.isDragging = true;
+        // let otherChilds = child.parent.children.filter((childNode) => childNode !== child);
+        // console.log(otherChilds.length);
+        // child.setScale(1.3, 1.3, 0);
+        // otherChilds.forEach((otherChild) => otherChild.setScale(0.8, 0.8, 0));
         const touchLocation = event.getUILocation();
         const nodeLocation = child
             .getComponent(UITransform)
@@ -114,7 +122,7 @@ export class Game extends Component {
             this.tileArea.addChild(row);
         }
     }
-    private onTouchMove(event: EventTouch, child: Node) {
+    onTouchMove(event: EventTouch, child: Node) {
         if (!this.isDragging) return;
 
         const touchLocation = event.getUILocation();
@@ -125,8 +133,11 @@ export class Game extends Component {
         child.setPosition(nodeLocation.add(this.offset));
     }
 
-    private onTouchEnd(event: EventTouch, child: Node) {
+    onTouchEnd(event: EventTouch, child: Node) {
         this.isDragging = false;
+        // child.parent.children.forEach((childNode) => {
+        //     childNode.setScale(1, 1, 0);
+        // });
 
         this.checkAvailability(event, child);
     }
@@ -171,14 +182,36 @@ export class Game extends Component {
     }
     checkAvailability(event: EventTouch, currNode: Node) {
         // get node from parent corresponding to mouse position
-        // i want to check if currNode can be placed in tiledArea or not
-        let currNodeBoundingBox = currNode.getComponent(UITransform).getBoundingBox();
+        // check if currNode can be placed in tiledArea or not
+        let currNodeBoundingBox = currNode.getComponent(UITransform).getBoundingBoxToWorld();
 
-        console.log(event.getUILocation());
-        let selectedTile = this.tileArea.children.filter((targetChild) => {
-            let targetBoudingBox = targetChild.getComponent(UITransform).getBoundingBox();
-            targetBoudingBox.intersects(currNodeBoundingBox);
-        });
-        console.log(selectedTile);
+        let mousePosition = event.getUILocation();
+        const localPosition = this.node
+            .getComponent(UITransform)
+            .convertToNodeSpaceAR(new Vec3(mousePosition.x, mousePosition.y, 0));
+        const hitNode = this.getNodeAtPoint(new Vec2(localPosition.x, localPosition.y));
+
+        console.log("row", hitNode);
+        const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
+        console.log("tile", tile);
+    }
+
+    getNodeAtPoint(point: Vec2) {
+        // Iterate through nodes and check collision
+        for (const child of this.tileArea.children) {
+            if (child.getComponent(UITransform).getBoundingBox().contains(point)) {
+                return child;
+            }
+        }
+        return null;
+    }
+    getTileFromRow(row: Node, point: Vec2) {
+        for (const tile of row.children) {
+            if (tile.getComponent(UITransform).getBoundingBoxToWorld().contains(point)) {
+                tile.getChildByName("Sprite").getComponent(Sprite).color = Color.GREEN;
+                return tile;
+            }
+        }
+        return null;
     }
 }
