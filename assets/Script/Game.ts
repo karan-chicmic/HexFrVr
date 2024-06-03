@@ -196,16 +196,8 @@ export class Game extends Component {
             .getComponent(UITransform)
             .convertToNodeSpaceAR(new Vec3(mousePosition.x, mousePosition.y, 0));
 
-        const patternPosition = this.patterns
-            .getComponent(UITransform)
-            .convertToNodeSpaceAR(new Vec3(mousePosition.x, mousePosition.y, 0));
-
         // get row from map
-        const hitNode = this.getNodeAtPoint(new Vec2(localPosition.x, localPosition.y), "map", currNode);
-
-        // get row from pattern
-
-        const rowHitNode = this.getNodeAtPoint(new Vec2(patternPosition.x, patternPosition.y), "patterns", currNode);
+        const hitNode = this.getNodeAtPoint(new Vec2(localPosition.x, localPosition.y));
 
         if (hitNode != null) {
             const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
@@ -214,34 +206,14 @@ export class Game extends Component {
             let parentIndex = this.tileArea.children.indexOf(hitNode);
 
             let index = parentIndex.toString() + tileIndex.toString();
-            // console.log("value at cell", this.mapSet.get(index));
+            console.log("value at cell", this.mapSet.get(index));
 
             // check if value is undefined
         }
-        if (rowHitNode != null) {
-            const tile = this.getTileFromRow(rowHitNode, new Vec2(patternPosition.x, patternPosition.y));
-            let tileIndex = rowHitNode.children.indexOf(tile);
-            let parentIndex = currNode.children.indexOf(rowHitNode);
-            console.log("pattern parent index", parentIndex);
-            console.log("patern tile index", tileIndex);
-        } else {
-            console.log("row hit node is null");
-        }
     }
 
-    getNodeAtPoint(point: Vec2, target: string, childNode: Node) {
-        // Iterate through nodes and check collision
-        let allChildrens: Node[];
-        if (target === "map") {
-            allChildrens = this.tileArea.children;
-        }
-        if (target == "patterns") {
-            allChildrens = childNode.children;
-
-            console.log("patterns executed", allChildrens);
-        }
-
-        for (const child of allChildrens) {
+    getNodeAtPoint(point: Vec2) {
+        for (const child of this.tileArea.children) {
             if (child.getComponent(UITransform).getBoundingBox().contains(point)) {
                 return child;
             }
