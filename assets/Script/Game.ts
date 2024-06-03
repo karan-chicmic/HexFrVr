@@ -1,5 +1,6 @@
 import {
     _decorator,
+    BlockInputEvents,
     Component,
     EventTouch,
     instantiate,
@@ -7,6 +8,7 @@ import {
     Layout,
     Node,
     Prefab,
+    randomRangeInt,
     UITransform,
     v3,
     Vec3,
@@ -22,18 +24,24 @@ export class Game extends Component {
     rowPrefab: Prefab = null;
     @property({ type: Prefab })
     tilePrefab: Prefab = null;
+    @property({ type: Prefab })
+    patternPrefab: Prefab = null;
     @property({ type: JsonAsset })
     patternJson: JsonAsset;
+    @property({ type: JsonAsset })
+    blockPattern: JsonAsset;
     @property({ type: Node })
     patterns: Node = null;
-    location;
+    @property({ type: Prefab })
+    blockPrefab: Prefab = null;
+    location: any;
     private isDragging: boolean = false;
     private offset: Vec3 = v3();
     start() {
         let jsonData = this.patternJson.json;
         let patterns = jsonData.patterns;
         let levelData = this.getDataByName(patterns, `map`);
-
+        this.generatePattern();
         for (let i = 0; i < 9; i++) {
             let rowData = levelData[i];
             let rowLength = rowData.length;
@@ -42,8 +50,8 @@ export class Game extends Component {
                 let diff = 9 - rowLength;
                 // rowNode.getComponent(Layout).paddingLeft = (diff * 45) / 2;
                 // rowNode.getComponent(Layout).paddingRight = (diff * 45) / 2;
-                rowNode.getComponent(Widget).left = (diff * 45) / 2;
-                rowNode.getComponent(Widget).right = (diff * 45) / 2;
+                rowNode.getComponent(Widget).left = (diff * 50) / 2;
+                rowNode.getComponent(Widget).right = (diff * 50) / 2;
             }
             for (let j = 0; j < rowLength; j++) {
                 let tileNode = instantiate(this.tilePrefab);
@@ -85,5 +93,38 @@ export class Game extends Component {
     getDataByName(patterns: any[], name: string) {
         return patterns.find((pattern: { name: any }) => pattern.name === name)?.data || null;
     }
+
+    generatePattern() {
+        for (let i = 0; i < 3; i++) {
+            let jsonData = this.blockPattern.json;
+            let Allpatterns = jsonData.block;
+            let blockNo = randomRangeInt(1, Allpatterns.length + 1);
+            let blockData = this.getDataByName(Allpatterns, `block${blockNo}`);
+            let str = `block${blockNo}`;
+            let rowNode = instantiate(this.blockPrefab);
+            console.log("block data " + `block${blockNo}`, blockData);
+            for (let j = 0; j < blockData.length; j++) {
+                let rowData = blockData[j];
+                let row = instantiate(this.rowPrefab);
+                for (let k = 0; k < rowData.length; k++) {
+                    if (rowData[k] == 0) continue;
+                    let blockNode = instantiate(this.patternPrefab);
+                    let first = rowData[0];
+                    let last = rowData[rowData.length - 1];
+                    row.addChild(blockNode);
+                    if (j % 2 == 1) {
+                        if (first == 0 && last !== 0) {
+                            //padding left
+                            row.getComponent(Layout).paddingLeft = 25;
+                        }
+                        if (first !== 0 && last == 0) {
+                            row.getComponent(Layout).paddingRight = 25;
+                        }
+                    }
+                }
+                rowNode.addChild(row);
+            }
+            this.patterns.addChild(rowNode);
+        }
+    }
 }
-// when mouse is clicked on a node i want that node to be selected until mouse click is released how to do that in cocos .ts
