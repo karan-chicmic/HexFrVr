@@ -131,6 +131,8 @@ export class Game extends Component {
             .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
 
         child.setPosition(nodeLocation.add(this.offset));
+
+        this.checkAvailability(event, child);
     }
 
     onTouchEnd(event: EventTouch, child: Node) {
@@ -138,8 +140,6 @@ export class Game extends Component {
         // child.parent.children.forEach((childNode) => {
         //     childNode.setScale(1, 1, 0);
         // });
-
-        this.checkAvailability(event, child);
     }
 
     getDataByName(patterns: any[], name: string) {
@@ -192,8 +192,10 @@ export class Game extends Component {
         const hitNode = this.getNodeAtPoint(new Vec2(localPosition.x, localPosition.y));
 
         console.log("row", hitNode);
-        const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
-        console.log("tile", tile);
+        if (hitNode != null) {
+            const tile = this.getTileFromRow(hitNode, new Vec2(mousePosition.x, mousePosition.y));
+            console.log("tile", tile);
+        }
     }
 
     getNodeAtPoint(point: Vec2) {
