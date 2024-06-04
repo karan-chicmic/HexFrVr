@@ -5,6 +5,7 @@ import {
     EventTouch,
     instantiate,
     JsonAsset,
+    Layout,
     Node,
     Prefab,
     randomRangeInt,
@@ -52,22 +53,13 @@ export class Game extends Component {
         this.generatePattern();
 
         this.patterns.children.forEach((child: Node) => {
-            child.on(
-                Node.EventType.TOUCH_START,
-                (event: EventTouch) => this.onTouchStart(event, child),
-
-                this
-            );
+            child.on(Node.EventType.TOUCH_START, (event: EventTouch) => this.onTouchStart(event, child), this);
             child.on(Node.EventType.TOUCH_MOVE, (event: EventTouch) => this.onTouchMove(event, child), this);
-            child.on(
-                Node.EventType.TOUCH_END,
-                (event: EventTouch) => this.onTouchEnd(event, child),
-
-                this
-            );
+            child.on(Node.EventType.TOUCH_END, (event: EventTouch) => this.onTouchEnd(event, child), this);
             child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
         });
     }
+
     onTouchStart(event: EventTouch, child: Node) {
         this.isDragging = true;
         this.scaleUp(child);
@@ -78,16 +70,19 @@ export class Game extends Component {
             .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
         this.offset = child.position.subtract(nodeLocation);
     }
+
     scaleUp(child: Node) {
         tween(child)
             .to(0.25, { scale: new Vec3(1.2, 1.2, 1.2) }, { easing: "linear" })
             .start();
     }
+
     scaleDown(child: Node) {
         tween(child)
             .to(0.25, { scale: new Vec3(1, 1, 1) }, { easing: "linear" })
             .start();
     }
+
     generateBoard(min: number, max: number) {
         for (let i = min; i <= max; i++) {
             let row = instantiate(this.rowPrefab);
@@ -109,13 +104,13 @@ export class Game extends Component {
             this.tileArea.addChild(row);
         }
     }
+
     generateReverseBoard(min: number, max: number) {
         for (let i = max - 1; i >= min; i--) {
             this.rNo = this.rNo + 1;
             let row = instantiate(this.rowPrefab);
             for (let j = 0; j < i; j++) {
                 let index = this.rNo.toString() + j.toString();
-
                 this.mapSet.set(index, 0);
                 let brick = instantiate(this.tilePrefab);
                 let brickWidth = brick.getComponent(UITransform).width;
@@ -129,6 +124,7 @@ export class Game extends Component {
             this.tileArea.addChild(row);
         }
     }
+
     onTouchMove(event: EventTouch, child: Node) {
         if (!this.isDragging) return;
 
@@ -136,15 +132,18 @@ export class Game extends Component {
         const nodeLocation = child
             .getComponent(UITransform)
             .convertToNodeSpaceAR(v3(touchLocation.x, touchLocation.y, 0));
-
         this.checkAvailability(event, child);
         child.setPosition(nodeLocation.add(this.offset));
     }
 
     onTouchEnd(event: EventTouch, child: Node) {
         this.scaleDown(child);
-
         this.isDragging = false;
+
+        // Check if the pattern can be placed and place it
+        if (this.canPlacePattern(event, child)) {
+            this.placePattern(event, child);
+        }
     }
 
     getDataByName(patterns: any[], name: string) {
@@ -157,50 +156,46 @@ export class Game extends Component {
             let Allpatterns = jsonData.block;
             let blockNo = randomRangeInt(1, Allpatterns.length + 1);
             let blockData = this.getDataByName(Allpatterns, `block${blockNo}`);
-            console.log("block data", blockData);
-            console.log("block generated", `block${blockNo}`);
 
             let rowNode = instantiate(this.blockPrefab);
+
             for (let j = 0; j < blockData.length; j++) {
                 let rowData = blockData[j];
                 let row = instantiate(this.rowPrefab);
                 for (let k = 0; k < rowData.length; k++) {
-                    if (rowData[k] == 0) {
-                        continue;
-                    } else {
-                        let blockNode = instantiate(this.patternPrefab);
-                        row.addChild(blockNode);
-                    }
+                    if (rowData[k] == 0) continue;
+                    let blockNode = instantiate(this.patternPrefab);
                     let first = rowData[0];
                     let last = rowData[rowData.length - 1];
-                    // let blockNodeUITransform = blockNode.getComponent(UITransform).width;
-                    // row.addChild(blockNode);
-                    // if (j % 2 == 1) {
-                    //     if (first == 0 && last !== 0) {
-                    //         //padding left
-                    //         row.getComponent(Layout).paddingLeft = blockNodeUITransform / 2;
-                    //     }
-                    //     if (first !== 0 && last == 0) {
-                    //         //padding right
-                    //         row.getComponent(Layout).paddingRight = blockNodeUITransform / 2;
-                    //     }
-                    // }
+                    let blockNodeUITransform = blockNode.getComponent(UITransform).width;
+                    row.addChild(blockNode);
+                    if (j % 2 == 1) {
+                        if (first == 0 && last !== 0) {
+                            // padding left
+                            row.getComponent(Layout).paddingLeft = blockNodeUITransform / 2;
+                        }
+                        if (first !== 0 && last == 0) {
+                            // padding right
+                            row.getComponent(Layout).paddingRight = blockNodeUITransform / 2;
+                        }
+                    }
                 }
                 rowNode.addChild(row);
             }
             this.patterns.addChild(rowNode);
         }
     }
+
     checkAvailability(event: EventTouch, currNode: Node) {
-        // get node from parent corresponding to mouse position
-        // check if currNode can be placed in tiledArea or not
+        // Get node from parent corresponding to mouse position
+        // Check if currNode can be placed in tileArea or not
 
         let mousePosition = event.getUILocation();
         const localPosition = this.node
             .getComponent(UITransform)
             .convertToNodeSpaceAR(new Vec3(mousePosition.x, mousePosition.y, 0));
 
-        // get row from map
+        // Get row from map
         const hitNode = this.getNodeAtPoint(new Vec2(localPosition.x, localPosition.y));
 
         if (hitNode != null) {
@@ -210,23 +205,9 @@ export class Game extends Component {
             let parentIndex = this.tileArea.children.indexOf(hitNode);
 
             let index = parentIndex.toString() + tileIndex.toString();
-
             console.log("value at cell", this.mapSet.get(index));
 
-            let centerRow = this.getCenterofPattern(currNode);
-            console.log("center of pattern row", centerRow);
-
-            let centerRowLeftIndex = this.getLeftIndex(centerRow, currNode, tileIndex);
-            console.log("center row left index", centerRowLeftIndex);
-            if (centerRowLeftIndex >= 0) {
-                if (this.isPatternValidForTile(currNode, centerRow, parentIndex, centerRowLeftIndex)) {
-                    console.error("Pattern can be placed here");
-                    let tiles = this.getTilesUnderPattern(currNode, centerRow, parentIndex, centerRowLeftIndex);
-                    console.log("tiles under pattern", tiles);
-                }
-            }
-
-            // check if value is undefined
+            // Check if value is undefined
         }
     }
 
@@ -238,6 +219,7 @@ export class Game extends Component {
         }
         return null;
     }
+
     getTileFromRow(row: Node, point: Vec2) {
         for (const tile of row.children) {
             if (tile.getComponent(UITransform).getBoundingBoxToWorld().contains(point)) {
@@ -247,59 +229,170 @@ export class Game extends Component {
         }
         return null;
     }
-    getLeftIndex(centerRow: number, currNode: Node, tileIndex: number) {
-        let centerRowOfNode = currNode.children[centerRow];
-        let centerRowLength = centerRowOfNode.children.length;
-        let leftIndex = tileIndex - centerRowLength + 1;
-        if (leftIndex >= 0) {
-            return leftIndex;
-        } else {
-            return -1;
-        }
-    }
 
-    getTilesUnderPattern(pattern: Node, centerRowIndex: number, parentIndex: number, leftIndex: number) {
-        let res = [];
-        let upperParentIndex = parentIndex - centerRowIndex;
-        let patternLength = pattern.children.length;
-        for (let i = 0; i < patternLength; i++) {
-            // let currRow = pattern.children[upperParentIndex];
-            // let selectedTilesFromRow = currRow.children.filter((tile) => {
-            //     tile.children.indexOf(tile) >= leftIndex;
-            // });
-            // res.push(selectedTilesFromRow);
-            upperParentIndex = upperParentIndex + 1;
-        }
-        return res;
-    }
+    canPlacePattern(event: EventTouch, pattern: Node) {
+        let canPlace = true;
+        const tiles = this.getTilesUnderPattern(event, pattern);
 
-    getCenterofPattern(pattern: Node) {
-        return Math.floor(pattern.children.length / 2);
-    }
-
-    isPatternValidForTile(pattern: Node, centerRowIndex: number, parentIndex: number, leftIndex: number) {
-        let upperParentIndex = parentIndex - centerRowIndex;
-        let lowerParentIndex = parentIndex + centerRowIndex;
-        console.log("upper parent index", upperParentIndex);
-        console.log("lower parent index", lowerParentIndex);
-        if (upperParentIndex < 0 || lowerParentIndex >= this.tileArea.children.length) return false;
-        pattern.children.forEach((row) => {
-            let rowLength = row.children.length;
-            if (leftIndex + rowLength >= this.tileArea.children[upperParentIndex].children.length) {
-                return false;
-            } else {
-                let currLeftIndex = leftIndex;
-                let remainingChilds = rowLength - 1 - leftIndex;
-                for (let i = 0; i < remainingChilds; i++) {
-                    let currIndex = upperParentIndex.toString() + currLeftIndex.toString();
-                    let tileValue = this.mapSet.get(currIndex);
-                    if (tileValue === 1) return false;
-                }
-
-                upperParentIndex = upperParentIndex + 1;
-                currLeftIndex = currLeftIndex + 1;
+        for (const tile of tiles) {
+            if (!tile || this.isTileOccupied(tile)) {
+                canPlace = false;
+                break;
             }
+        }
+
+        return canPlace;
+    }
+
+    placePattern(event: EventTouch, pattern: Node) {
+        const tiles = this.getTilesUnderPattern(event, pattern);
+
+        for (const tile of tiles) {
+            if (tile) {
+                this.markTileAsOccupied(tile);
+            }
+        }
+
+        pattern.destroy();
+        this.checkForCompletion();
+    }
+
+    getTilesUnderPattern(event: EventTouch, pattern: Node) {
+        const patternPosition = pattern.position;
+        const tiles = [];
+
+        // Assuming pattern has children as rows and rows have children as blocks
+        pattern.children.forEach((row: Node, rowIndex: number) => {
+            row.children.forEach((block: Node, blockIndex: number) => {
+                const blockPosition = block.getComponent(UITransform).convertToWorldSpaceAR(v3(0, 0, 0));
+                const localPosition = this.tileArea.getComponent(UITransform).convertToNodeSpaceAR(blockPosition);
+                const tile = this.getTileAtPoint(new Vec2(localPosition.x, localPosition.y));
+                tile.getChildByName("Sprite").getComponent(Sprite).color = Color.RED;
+                tiles.push(tile);
+            });
         });
+
+        return tiles;
+    }
+
+    getTileAtPoint(point: Vec2) {
+        for (const row of this.tileArea.children) {
+            for (const tile of row.children) {
+                if (tile.getComponent(UITransform).getBoundingBox().contains(point)) {
+                    return tile;
+                }
+            }
+        }
+        return null;
+    }
+
+    isTileOccupied(tile: Node) {
+        const rowIndex = this.tileArea.children.indexOf(tile.parent);
+        const tileIndex = tile.parent.children.indexOf(tile);
+        const index = rowIndex.toString() + tileIndex.toString();
+        return this.mapSet.get(index) === 1;
+    }
+
+    markTileAsOccupied(tile: Node) {
+        const rowIndex = this.tileArea.children.indexOf(tile.parent);
+        const tileIndex = tile.parent.children.indexOf(tile);
+        const index = rowIndex.toString() + tileIndex.toString();
+        this.mapSet.set(index, 1);
+    }
+
+    checkForCompletion() {
+        const rows = this.tileArea.children.length;
+        const cols = this.tileArea.children[0].children.length;
+
+        for (let i = 0; i < rows; i++) {
+            if (this.isRowComplete(i)) {
+                this.clearRow(i);
+            }
+        }
+
+        for (let i = 0; i < cols; i++) {
+            if (this.isColumnComplete(i)) {
+                this.clearColumn(i);
+            }
+        }
+
+        if (this.isMainDiagonalComplete()) {
+            this.clearMainDiagonal();
+        }
+
+        if (this.isAntiDiagonalComplete()) {
+            this.clearAntiDiagonal();
+        }
+    }
+
+    isRowComplete(rowIndex: number) {
+        const row = this.tileArea.children[rowIndex];
+        return row.children.every((tile: Node) => this.isTileOccupied(tile));
+    }
+
+    clearRow(rowIndex: number) {
+        const row = this.tileArea.children[rowIndex];
+        row.children.forEach((tile: Node) => {
+            this.markTileAsFree(tile);
+        });
+    }
+
+    isColumnComplete(colIndex: number) {
+        return this.tileArea.children.every((row: Node) => this.isTileOccupied(row.children[colIndex]));
+    }
+
+    clearColumn(colIndex: number) {
+        this.tileArea.children.forEach((row: Node) => {
+            const tile = row.children[colIndex];
+            this.markTileAsFree(tile);
+        });
+    }
+
+    isMainDiagonalComplete() {
+        for (let i = 0; i < this.tileArea.children.length; i++) {
+            const row = this.tileArea.children[i];
+            const tile = row.children[i];
+            if (!this.isTileOccupied(tile)) {
+                return false;
+            }
+        }
         return true;
+    }
+
+    clearMainDiagonal() {
+        for (let i = 0; i < this.tileArea.children.length; i++) {
+            const row = this.tileArea.children[i];
+            const tile = row.children[i];
+            this.markTileAsFree(tile);
+        }
+    }
+
+    isAntiDiagonalComplete() {
+        for (let i = 0; i < this.tileArea.children.length; i++) {
+            const row = this.tileArea.children[i];
+            const tile = row.children[row.children.length - 1 - i];
+            if (!this.isTileOccupied(tile)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    clearAntiDiagonal() {
+        for (let i = 0; i < this.tileArea.children.length; i++) {
+            const row = this.tileArea.children[i];
+            const tile = row.children[row.children.length - 1 - i];
+            this.markTileAsFree(tile);
+        }
+    }
+
+    markTileAsFree(tile: Node) {
+        const rowIndex = this.tileArea.children.indexOf(tile.parent);
+        const tileIndex = tile.parent.children.indexOf(tile);
+        const index = rowIndex.toString() + tileIndex.toString();
+        this.mapSet.set(index, 0);
+
+        // Optionally, you can reset the tile's appearance here
+        tile.getChildByName("Sprite").getComponent(Sprite).color = Color.WHITE;
     }
 }
