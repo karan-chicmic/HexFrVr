@@ -43,6 +43,8 @@ export class Game extends Component {
     private MinLength = 5;
     private MaxLength = 9;
     private rNo = -1;
+    isValidPattern = false;
+    tilesUnderPattern = [];
 
     mapSet = new Map<string, number>();
 
@@ -70,6 +72,7 @@ export class Game extends Component {
     }
     onTouchStart(event: EventTouch, child: Node) {
         this.isDragging = true;
+        this.isValidPattern = false;
         this.scaleUp(child);
 
         const touchLocation = event.getUILocation();
@@ -143,6 +146,9 @@ export class Game extends Component {
 
     onTouchEnd(event: EventTouch, child: Node) {
         this.scaleDown(child);
+        this.tilesUnderPattern.forEach((tile: Node) => {
+            tile.getChildByName("Sprite").getComponent(Sprite).color = Color.YELLOW;
+        });
 
         this.isDragging = false;
     }
@@ -223,6 +229,9 @@ export class Game extends Component {
                     console.error("Pattern can be placed here");
                     let tiles = this.getTilesUnderPattern(currNode, centerRow, parentIndex, centerRowLeftIndex);
                     console.log("tiles under pattern", tiles);
+                    tiles.forEach((tile) => {
+                        tile.getChildByName("Sprite").getComponent(Sprite).color = Color.CYAN;
+                    });
                 }
             }
 
@@ -259,18 +268,27 @@ export class Game extends Component {
     }
 
     getTilesUnderPattern(pattern: Node, centerRowIndex: number, parentIndex: number, leftIndex: number) {
-        let res = [];
+        this.tilesUnderPattern = [];
         let upperParentIndex = parentIndex - centerRowIndex;
         let patternLength = pattern.children.length;
         for (let i = 0; i < patternLength; i++) {
-            // let currRow = pattern.children[upperParentIndex];
+            let currRow = this.tileArea.children[upperParentIndex];
+            let currPatternRow = pattern.children[i];
+            currRow.children.forEach((tile) => {
+                if (
+                    currRow.children.indexOf(tile) >= leftIndex &&
+                    currRow.children.indexOf(tile) < leftIndex + currPatternRow.children.length
+                )
+                    this.tilesUnderPattern.push(tile);
+            });
+
             // let selectedTilesFromRow = currRow.children.filter((tile) => {
-            //     tile.children.indexOf(tile) >= leftIndex;
+            //     currRow.children.indexOf(tile) >= leftIndex;
             // });
             // res.push(selectedTilesFromRow);
             upperParentIndex = upperParentIndex + 1;
         }
-        return res;
+        return this.tilesUnderPattern;
     }
 
     getCenterofPattern(pattern: Node) {
@@ -295,11 +313,12 @@ export class Game extends Component {
                     let tileValue = this.mapSet.get(currIndex);
                     if (tileValue === 1) return false;
                 }
-
+                console.log("upper parent value inside loop", upperParentIndex);
                 upperParentIndex = upperParentIndex + 1;
                 currLeftIndex = currLeftIndex + 1;
             }
         });
+        this.isValidPattern = true;
         return true;
     }
 }
