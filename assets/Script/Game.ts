@@ -46,8 +46,17 @@ export class Game extends Component {
     private rNo = -1;
     isValidPattern = false;
     tilesUnderPattern = [];
+    tileIndex = [];
 
     mapSet = new Map<string, number>();
+
+    AllColors = [
+        { color: new Color(64, 102, 161) },
+        { color: new Color(75, 92, 100) },
+        { color: new Color(87, 50, 161) },
+        { color: new Color(115, 190, 76) },
+        { color: new Color(115, 93, 54) },
+    ];
 
     start() {
         this.generateBoard(this.MinLength, this.MaxLength);
@@ -152,7 +161,13 @@ export class Game extends Component {
         this.scaleDown(child);
         if (this.isValidPattern) {
             this.tilesUnderPattern.forEach((tile: Node) => {
-                tile.getChildByName("Sprite").getComponent(Sprite).color = Color.YELLOW;
+                tile.getChildByName("Sprite").getComponent(Sprite).color = child.children[0].children[0]
+                    .getChildByName("Sprite")
+                    .getComponent(Sprite).color;
+            });
+            console.log(this.tileIndex);
+            this.tileIndex.forEach((idx) => {
+                this.mapSet.set(idx, 1);
             });
             child.destroy();
             this.addNewPattern();
@@ -166,6 +181,7 @@ export class Game extends Component {
         return patterns.find((pattern: { name: any }) => pattern.name === name)?.data || null;
     }
     addNewPattern() {
+        let patternColor = this.AllColors[randomRangeInt(0, this.AllColors.length)].color;
         let jsonData = this.blockPattern.json;
         let Allpatterns = jsonData.block;
         let blockNo = randomRangeInt(1, Allpatterns.length + 1);
@@ -182,6 +198,7 @@ export class Game extends Component {
                     continue;
                 } else {
                     let blockNode = instantiate(this.patternPrefab);
+                    blockNode.getChildByName("Sprite").getComponent(Sprite).color = patternColor;
                     row.addChild(blockNode);
                 }
             }
@@ -228,7 +245,9 @@ export class Game extends Component {
                     let tiles = this.getTilesUnderPattern(currNode, centerRow, parentIndex, centerRowLeftIndex);
                     console.log("tiles under pattern", tiles);
                     tiles.forEach((tile) => {
-                        tile.getChildByName("Sprite").getComponent(Sprite).color = Color.CYAN;
+                        tile.getChildByName("Sprite").getComponent(Sprite).color = currNode.children[0].children[0]
+                            .getChildByName("Sprite")
+                            .getComponent(Sprite).color;
                     });
                 }
             }
@@ -276,8 +295,11 @@ export class Game extends Component {
                 if (
                     currRow.children.indexOf(tile) >= leftIndex &&
                     currRow.children.indexOf(tile) < leftIndex + currPatternRow.children.length
-                )
+                ) {
+                    let currIndex = upperParentIndex.toString() + currRow.children.indexOf(tile).toString();
                     this.tilesUnderPattern.push(tile);
+                    this.tileIndex.push(currIndex);
+                }
             });
 
             // let selectedTilesFromRow = currRow.children.filter((tile) => {
@@ -309,11 +331,12 @@ export class Game extends Component {
                 for (let i = 0; i < remainingChilds; i++) {
                     let currIndex = upperParentIndex.toString() + currLeftIndex.toString();
                     let tileValue = this.mapSet.get(currIndex);
-                    if (tileValue === 1) return false;
+                    console.log("curr index", currIndex, "curr value", this.mapSet.get(currIndex));
+                    if (tileValue == 1) return false;
+                    currLeftIndex = currLeftIndex + 1;
                 }
                 console.log("upper parent value inside loop", upperParentIndex);
                 upperParentIndex = upperParentIndex + 1;
-                currLeftIndex = currLeftIndex + 1;
             }
         });
         this.isValidPattern = true;
