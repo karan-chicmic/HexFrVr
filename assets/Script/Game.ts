@@ -5,6 +5,7 @@ import {
     EventTouch,
     instantiate,
     JsonAsset,
+    Layout,
     Node,
     Prefab,
     randomRangeInt,
@@ -52,23 +53,7 @@ export class Game extends Component {
         this.generateBoard(this.MinLength, this.MaxLength);
         this.generateReverseBoard(this.MinLength, this.MaxLength);
         this.generatePattern();
-
-        this.patterns.children.forEach((child: Node) => {
-            child.on(
-                Node.EventType.TOUCH_START,
-                (event: EventTouch) => this.onTouchStart(event, child),
-
-                this
-            );
-            child.on(Node.EventType.TOUCH_MOVE, (event: EventTouch) => this.onTouchMove(event, child), this);
-            child.on(
-                Node.EventType.TOUCH_END,
-                (event: EventTouch) => this.onTouchEnd(event, child),
-
-                this
-            );
-            child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
-        });
+        this.patternCallbacks();
     }
     onTouchStart(event: EventTouch, child: Node) {
         this.isDragging = true;
@@ -85,6 +70,25 @@ export class Game extends Component {
         tween(child)
             .to(0.25, { scale: new Vec3(1.2, 1.2, 1.2) }, { easing: "linear" })
             .start();
+    }
+
+    patternCallbacks() {
+        this.patterns.children.forEach((child: Node) => {
+            child.on(
+                Node.EventType.TOUCH_START,
+                (event: EventTouch) => this.onTouchStart(event, child),
+
+                this
+            );
+            child.on(Node.EventType.TOUCH_MOVE, (event: EventTouch) => this.onTouchMove(event, child), this);
+            child.on(
+                Node.EventType.TOUCH_END,
+                (event: EventTouch) => this.onTouchEnd(event, child),
+
+                this
+            );
+            child.on(Node.EventType.TOUCH_CANCEL, (event: EventTouch) => this.onTouchEnd(event, child), this);
+        });
     }
     scaleDown(child: Node) {
         tween(child)
@@ -146,9 +150,14 @@ export class Game extends Component {
 
     onTouchEnd(event: EventTouch, child: Node) {
         this.scaleDown(child);
-        this.tilesUnderPattern.forEach((tile: Node) => {
-            tile.getChildByName("Sprite").getComponent(Sprite).color = Color.YELLOW;
-        });
+        if (this.isValidPattern) {
+            this.tilesUnderPattern.forEach((tile: Node) => {
+                tile.getChildByName("Sprite").getComponent(Sprite).color = Color.YELLOW;
+            });
+            child.destroy();
+            this.addNewPattern();
+            this.patternCallbacks();
+        }
 
         this.isDragging = false;
     }
@@ -156,45 +165,34 @@ export class Game extends Component {
     getDataByName(patterns: any[], name: string) {
         return patterns.find((pattern: { name: any }) => pattern.name === name)?.data || null;
     }
+    addNewPattern() {
+        let jsonData = this.blockPattern.json;
+        let Allpatterns = jsonData.block;
+        let blockNo = randomRangeInt(1, Allpatterns.length + 1);
+        let blockData = this.getDataByName(Allpatterns, `block${blockNo}`);
+        console.log("block data", blockData);
+        console.log("block generated", `block${blockNo}`);
+
+        let rowNode = instantiate(this.blockPrefab);
+        for (let j = 0; j < blockData.length; j++) {
+            let rowData = blockData[j];
+            let row = instantiate(this.rowPrefab);
+            for (let k = 0; k < rowData.length; k++) {
+                if (rowData[k] == 0) {
+                    continue;
+                } else {
+                    let blockNode = instantiate(this.patternPrefab);
+                    row.addChild(blockNode);
+                }
+            }
+            rowNode.addChild(row);
+        }
+        this.patterns.addChild(rowNode);
+    }
 
     generatePattern() {
         for (let i = 0; i < 3; i++) {
-            let jsonData = this.blockPattern.json;
-            let Allpatterns = jsonData.block;
-            let blockNo = randomRangeInt(1, Allpatterns.length + 1);
-            let blockData = this.getDataByName(Allpatterns, `block${blockNo}`);
-            console.log("block data", blockData);
-            console.log("block generated", `block${blockNo}`);
-
-            let rowNode = instantiate(this.blockPrefab);
-            for (let j = 0; j < blockData.length; j++) {
-                let rowData = blockData[j];
-                let row = instantiate(this.rowPrefab);
-                for (let k = 0; k < rowData.length; k++) {
-                    if (rowData[k] == 0) {
-                        continue;
-                    } else {
-                        let blockNode = instantiate(this.patternPrefab);
-                        row.addChild(blockNode);
-                    }
-                    let first = rowData[0];
-                    let last = rowData[rowData.length - 1];
-                    // let blockNodeUITransform = blockNode.getComponent(UITransform).width;
-                    // row.addChild(blockNode);
-                    // if (j % 2 == 1) {
-                    //     if (first == 0 && last !== 0) {
-                    //         //padding left
-                    //         row.getComponent(Layout).paddingLeft = blockNodeUITransform / 2;
-                    //     }
-                    //     if (first !== 0 && last == 0) {
-                    //         //padding right
-                    //         row.getComponent(Layout).paddingRight = blockNodeUITransform / 2;
-                    //     }
-                    // }
-                }
-                rowNode.addChild(row);
-            }
-            this.patterns.addChild(rowNode);
+            this.addNewPattern();
         }
     }
     checkAvailability(event: EventTouch, currNode: Node) {
