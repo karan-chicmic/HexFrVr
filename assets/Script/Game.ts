@@ -158,29 +158,34 @@ export class Game extends Component {
             let Allpatterns = jsonData.block;
             let blockNo = randomRangeInt(1, Allpatterns.length + 1);
             let blockData = this.getDataByName(Allpatterns, `block${blockNo}`);
+            console.log("block data", blockData);
+            console.log("block generated", `block${blockNo}`);
 
             let rowNode = instantiate(this.blockPrefab);
-
             for (let j = 0; j < blockData.length; j++) {
                 let rowData = blockData[j];
                 let row = instantiate(this.rowPrefab);
                 for (let k = 0; k < rowData.length; k++) {
-                    if (rowData[k] == 0) continue;
-                    let blockNode = instantiate(this.patternPrefab);
+                    if (rowData[k] == 0) {
+                        continue;
+                    } else {
+                        let blockNode = instantiate(this.patternPrefab);
+                        row.addChild(blockNode);
+                    }
                     let first = rowData[0];
                     let last = rowData[rowData.length - 1];
-                    let blockNodeUITransform = blockNode.getComponent(UITransform).width;
-                    row.addChild(blockNode);
-                    if (j % 2 == 1) {
-                        if (first == 0 && last !== 0) {
-                            //padding left
-                            row.getComponent(Layout).paddingLeft = blockNodeUITransform / 2;
-                        }
-                        if (first !== 0 && last == 0) {
-                            //padding right
-                            row.getComponent(Layout).paddingRight = blockNodeUITransform / 2;
-                        }
-                    }
+                    // let blockNodeUITransform = blockNode.getComponent(UITransform).width;
+                    // row.addChild(blockNode);
+                    // if (j % 2 == 1) {
+                    //     if (first == 0 && last !== 0) {
+                    //         //padding left
+                    //         row.getComponent(Layout).paddingLeft = blockNodeUITransform / 2;
+                    //     }
+                    //     if (first !== 0 && last == 0) {
+                    //         //padding right
+                    //         row.getComponent(Layout).paddingRight = blockNodeUITransform / 2;
+                    //     }
+                    // }
                 }
                 rowNode.addChild(row);
             }
