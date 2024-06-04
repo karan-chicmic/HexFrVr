@@ -1,11 +1,12 @@
 import {
     _decorator,
+    Button,
     Color,
     Component,
+    director,
     EventTouch,
     instantiate,
     JsonAsset,
-    Layout,
     Node,
     Prefab,
     randomRangeInt,
@@ -38,6 +39,10 @@ export class Game extends Component {
     patterns: Node = null;
     @property({ type: Prefab })
     blockPrefab: Prefab = null;
+    @property({ type: Node })
+    menuButton: Node = null;
+    @property({ type: Node })
+    menu: Node = null;
     location: any;
     private isDragging: boolean = false;
     private offset: Vec3 = v3();
@@ -302,10 +307,6 @@ export class Game extends Component {
                 }
             });
 
-            // let selectedTilesFromRow = currRow.children.filter((tile) => {
-            //     currRow.children.indexOf(tile) >= leftIndex;
-            // });
-            // res.push(selectedTilesFromRow);
             upperParentIndex = upperParentIndex + 1;
         }
         return this.tilesUnderPattern;
@@ -341,5 +342,18 @@ export class Game extends Component {
         });
         this.isValidPattern = true;
         return true;
+    }
+    onMenuButtonClick() {
+        this.menuButton.active = false;
+        this.menu.active = true;
+    }
+
+    onCloseClick() {
+        this.menu.active = false;
+        this.menuButton.active = true;
+    }
+
+    onNewGame() {
+        director.loadScene("main");
     }
 }
